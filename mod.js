@@ -105,7 +105,7 @@ export const parseJevkoStream2 = (next) => {
 
 export const parseJevkoStream3 = (next) => {
   let parent = {subjevkos: []}
-  const parents = [parent]
+  const parents = []
 
   const self = {
     prefix: (prefix) => {
@@ -118,7 +118,8 @@ export const parseJevkoStream3 = (next) => {
       parent.suffix = suffix
       parent = parents.pop()
     },
-    end: () => {
+    end: (suffix) => {
+      parent.suffix = suffix
       return next.end?.(parent)
     },
   }

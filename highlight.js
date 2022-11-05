@@ -27,21 +27,21 @@ const write = {
   }
 }
 
-const writeText = (p, color) => {
+const writeText = (text, color) => {
   let h = 0
   write.bytes(color)
-  for (let i = 0; i < p.length; ++i) {
-    const c = p[i]
+  for (let i = 0; i < text.length; ++i) {
+    const c = text[i]
     if (c === '`' || c === '[' || c === ']') {
-      write.bytes(enc.encode(p.slice(h, i)))
+      write.bytes(enc.encode(text.slice(h, i)))
       write.bytes(cyan)
       h = i + 1
       write.bytes(escaper)
-      write.bytes(enc.encode(p.slice(i, h)))
+      write.bytes(enc.encode(c))
       write.bytes(color)
     }
   }
-  write.bytes(enc.encode(p.slice(h)))
+  write.bytes(enc.encode(text.slice(h)))
   write.bytes(reset)
 }
 
@@ -51,16 +51,16 @@ const opener = [...enc.encode("[")]
 const closer = [...enc.encode("]")]
 
 const stream = parseJevkoStream(parseJevkoStream2({
-  prefix: (p) => {
-    writeText(p, green)
+  prefix: (text) => {
+    writeText(text, green)
     write.bytes(opener)
   },
-  suffix: (p) => {
-    writeText(p, yellow)
+  suffix: (text) => {
+    writeText(text, yellow)
     write.bytes(closer)
   },
-  end: (p) => {
-    writeText(p, yellow)
+  end: (text) => {
+    writeText(text, yellow)
     write.end()
   }
 }))
