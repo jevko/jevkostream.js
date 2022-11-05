@@ -95,9 +95,9 @@ export const parseJevkoStream2 = (next) => {
       textBuffer += code
     },
     end: () => {
-      next.suffix?.(textBuffer)
+      let ret = next.end?.(textBuffer)
       textBuffer = ''
-      return next.end?.()
+      return ret
     },
   }
   return self
