@@ -1,11 +1,11 @@
-import { parseJevkoStream, parseJevkoStream2, parseJevkoStream3, trimPrefixes } from "./mod.js"
+import { parseJevkoStream, jevkoStreamToTree, trimPrefixes } from "./mod.js"
 
 Deno.test('stream', () => {
-  const stream = parseJevkoStream(parseJevkoStream2(parseJevkoStream3({
+  const stream = parseJevkoStream(jevkoStreamToTree({
     end: (j) => {
       return JSON.stringify(j, null, 2)
     }
-  })))
+  }))
 
   stream.chunk(`first name [John]
   last name [Smith]
@@ -36,17 +36,19 @@ Deno.test('stream', () => {
 
 Deno.test('trim prefixes', () => {
   // todo
-  const stream = parseJevkoStream(parseJevkoStream2(trimPrefixes({
-    prefix: (text) => {
-      console.log('pre', `|${text}|`)
-    },
-    suffix: (text) => {
-      // console.log('suf', `|${text}|`)
-    },
-    end: (text) => {
-      // console.log('suf', `|${text}|`)
-    },
-  })))
+  const stream = parseJevkoStream(
+    trimPrefixes({
+      prefix: (text) => {
+        console.log('pre', `|${text}|`)
+      },
+      suffix: (text) => {
+        // console.log('suf', `|${text}|`)
+      },
+      end: (text) => {
+        // console.log('suf', `|${text}|`)
+      },
+    })
+  )
 
   stream.chunk(`first name [John]
   last name [Smith]

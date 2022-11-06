@@ -13,16 +13,20 @@ export const parseJevkoStream = (next, {
 
   let ret
 
+  let h = 0
+
+  let textBuffer = ''
+
   const self = {
     chunk: (chunk) => {
-      for (const code of chunk) {
+      for (let i = 0; i < chunk.length; ++i) {
+        const code = chunk[i]
         if (isEscaped) {
           switch (code) {
             case escaper:
             case opener:
             case closer: {
               isEscaped = false
-              ret = next.character?.(code)
               break
             }
             default:
@@ -31,25 +35,29 @@ export const parseJevkoStream = (next, {
         } else switch (code) {
           case escaper: {
             isEscaped = true
-            ret = next.escaper?.(code)
+            textBuffer += chunk.slice(h, i)
+            h = i + 1
             break
           }
           case opener: {
             if (parents.length >= maxDepth) throw Error(`Invalid parser state! Max depth of ${maxDepth} exceeded!`)
+
             parents.push([line, column])
-            ret = next.opener?.(code)
+            ret = next.prefix?.(textBuffer + chunk.slice(h, i))
+            textBuffer = ''
+            h = i + 1
             break
           }
           case closer: {
             if (parents.length === 0) throw SyntaxError(`Unexpected closer (${closer}) at ${line}:${column}!`)
   
             parents.pop()
-            ret = next.closer?.(code)
+            ret = next.suffix?.(textBuffer + chunk.slice(h, i))
+            textBuffer = ''
+            h = i + 1
             break
           }
-          default:
-            ret = next.character?.(code)
-            break
+          default: break
         }
   
         if (code === newline) {
@@ -59,6 +67,7 @@ export const parseJevkoStream = (next, {
           ++column
         }
       }
+      textBuffer += chunk.slice(h)
 
       return ret
     },
@@ -70,34 +79,16 @@ export const parseJevkoStream = (next, {
         throw SyntaxError(`Unexpected end: missing ${parents.length} closer(s) (${closer})!`)
       }
 
-      return next.end?.()
-    },
-  }
-  return self
-}
-
-export const parseJevkoStream2 = (next) => {
-  let textBuffer = ''
-
-  const self = {
-    // escaper: (code) => {},
-    opener: (code) => {
-      let ret = next.prefix?.(textBuffer)
-      textBuffer = ''
-      return ret
-    },
-    closer: (code) => {
-      let ret = next.suffix?.(textBuffer)
-      textBuffer = ''
-      return ret
-    },
-    character: (code) => {
-      textBuffer += code
-    },
-    end: () => {
       let ret = next.end?.(textBuffer)
       textBuffer = ''
       return ret
+    },
+    state: () => {
+      return {
+        opener,
+        closer,
+        escaper,
+      }
     },
   }
   return self
@@ -118,7 +109,7 @@ export const trimPrefixes = (next) => {
   return self
 }
 
-export const parseJevkoStream3 = (next) => {
+export const jevkoStreamToTree = (next) => {
   let parent = {subjevkos: []}
   const parents = []
 

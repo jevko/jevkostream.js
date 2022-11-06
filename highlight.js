@@ -1,4 +1,4 @@
-import {parseJevkoStream2, parseJevkoStream} from './mod.js'
+import {parseJevkoStream} from './mod.js'
 
 const enc = new TextEncoder()
 
@@ -50,7 +50,7 @@ const escaper = [...enc.encode("`")]
 const opener = [...enc.encode("[")]
 const closer = [...enc.encode("]")]
 
-const stream = parseJevkoStream(parseJevkoStream2({
+const stream = parseJevkoStream(({
   prefix: (text) => {
     writeText(text, green)
     write.bytes(opener)
