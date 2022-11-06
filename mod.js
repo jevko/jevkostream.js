@@ -78,11 +78,9 @@ export const parseJevkoStream = (next, {
         throw SyntaxError(`Unexpected end: missing ${parents.length} closer(s) (${closer})!`)
       }
 
-      next.end?.(textBuffer)
+      const ret = next.end?.(textBuffer)
       textBuffer = ''
-
-      // todo:
-      return 'ok'
+      return ret
     },
     state: () => {
       return {
@@ -97,14 +95,9 @@ export const parseJevkoStream = (next, {
 
 export const trimPrefixes = (next) => {
   const self = {
+    ...next,
     prefix: (text) => {
       return next.prefix?.(text.trim())
-    },
-    suffix: (text) => {
-      return next.suffix?.(text)
-    },
-    end: (text) => {
-      return next.end?.(text)
     },
   }
   return self
