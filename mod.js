@@ -103,6 +103,21 @@ export const parseJevkoStream2 = (next) => {
   return self
 }
 
+export const trimPrefixes = (next) => {
+  const self = {
+    prefix: (text) => {
+      return next.prefix?.(text.trim())
+    },
+    suffix: (text) => {
+      return next.suffix?.(text)
+    },
+    end: (text) => {
+      return next.end?.(text)
+    },
+  }
+  return self
+}
+
 export const parseJevkoStream3 = (next) => {
   let parent = {subjevkos: []}
   const parents = []
