@@ -11,8 +11,6 @@ export const parseJevkoStream = (next, {
 
   let line = 1, column = 1
 
-  let ret
-
   let h = 0
 
   let textBuffer = ''
@@ -43,7 +41,7 @@ export const parseJevkoStream = (next, {
             if (parents.length >= maxDepth) throw Error(`Invalid parser state! Max depth of ${maxDepth} exceeded!`)
 
             parents.push([line, column])
-            ret = next.prefix?.(textBuffer + chunk.slice(h, i))
+            next.prefix?.(textBuffer + chunk.slice(h, i))
             textBuffer = ''
             h = i + 1
             break
@@ -52,7 +50,7 @@ export const parseJevkoStream = (next, {
             if (parents.length === 0) throw SyntaxError(`Unexpected closer (${closer}) at ${line}:${column}!`)
   
             parents.pop()
-            ret = next.suffix?.(textBuffer + chunk.slice(h, i))
+            next.suffix?.(textBuffer + chunk.slice(h, i))
             textBuffer = ''
             h = i + 1
             break
@@ -69,7 +67,8 @@ export const parseJevkoStream = (next, {
       }
       textBuffer += chunk.slice(h)
 
-      return ret
+      // todo:
+      return 'ok'
     },
     end: () => {
       if (isEscaped) throw SyntaxError(`Unexpected end after escaper (${escaper})!`)
@@ -79,9 +78,11 @@ export const parseJevkoStream = (next, {
         throw SyntaxError(`Unexpected end: missing ${parents.length} closer(s) (${closer})!`)
       }
 
-      let ret = next.end?.(textBuffer)
+      next.end?.(textBuffer)
       textBuffer = ''
-      return ret
+
+      // todo:
+      return 'ok'
     },
     state: () => {
       return {
