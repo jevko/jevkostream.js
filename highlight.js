@@ -27,21 +27,19 @@ const write = {
   }
 }
 
-const writeText = (text, color) => {
+const writeText = (text, info, color) => {
   let h = 0
   write.bytes(color)
-  for (let i = 0; i < text.length; ++i) {
-    const c = text[i]
-    if (c === '`' || c === '[' || c === ']') {
-      write.bytes(enc.encode(text.slice(h, i)))
-      write.bytes(cyan)
-      h = i + 1
-      write.bytes(escaper)
-      write.bytes(enc.encode(c))
-      write.bytes(color)
-    }
+  const {escapedAt} = info
+  for (const i of escapedAt) {
+    write.bytes(enc.encode(text.slice(h, i)))
+    write.bytes(cyan)
+    h = i + 1
+    write.bytes(escaper)
+    write.bytes(enc.encode(text[i]))
+    write.bytes(color)
   }
-  write.bytes(enc.encode(text.slice(h)))
+  if (h < text.length) write.bytes(enc.encode(text.slice(h)))
   write.bytes(reset)
 }
 
@@ -51,16 +49,16 @@ const opener = [...enc.encode("[")]
 const closer = [...enc.encode("]")]
 
 const stream = parseJevkoStream(({
-  prefix: (text) => {
-    writeText(text, green)
+  prefix: (text, info) => {
+    writeText(text, info, green)
     write.bytes(opener)
   },
-  suffix: (text) => {
-    writeText(text, yellow)
+  suffix: (text, info) => {
+    writeText(text, info, yellow)
     write.bytes(closer)
   },
-  end: (text) => {
-    writeText(text, yellow)
+  end: (text, info) => {
+    writeText(text, info, yellow)
     write.end()
   }
 }))

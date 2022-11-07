@@ -1,6 +1,6 @@
 # jevkostream.js
 
-NOTE: not for human consumption (yet?)
+NOTE: this is a work in progress
 
 Streaming parsers for Jevko.
 
