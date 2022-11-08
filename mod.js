@@ -143,8 +143,8 @@ export const removeByPrefix = (next, commentPrefix = '--') => {
     ...next,
     prefix: (text, info) => {
       if (isRemoved === false) {
-        if (text !== commentPrefix) return next.prefix?.(text, info)
-        else isRemoved = true
+        if (text === commentPrefix) isRemoved = true
+        else return next.prefix?.(text, info)
       }
     },
     suffix: (text, info) => {
