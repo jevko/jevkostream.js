@@ -139,20 +139,21 @@ export const trimPrefixes = (next) => {
 
 export const removeByPrefix = (next, commentPrefix = '--') => {
   let isRemoved = false
+  let depth = 0
   const self = {
     ...next,
     prefix: (text, info) => {
       if (isRemoved === false) {
         if (text === commentPrefix) isRemoved = true
         else return next.prefix?.(text, info)
-      }
+      } else ++depth
     },
     suffix: (text, info) => {
       if (isRemoved === false) {
         return next.suffix?.(text, info)
-      } else {
+      } else if (depth === 0) {
         isRemoved = false
-      }
+      } else --depth
     }
   }
   return self
