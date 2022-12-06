@@ -7,80 +7,126 @@ export const parseJevkoStream = (next, {
   opener = "[",
   closer = "]",
   escaper = "`",
+  blocker = "/",
 } = {}) => {
-  let isEscaped = false
+  let mode = 'normal'
+  let tag = ''
 
   let line = 1, column = 1, index = 0
 
   let parents = [
     {
       from: {line, column, index}, 
-      trivial: true,
+      length: 0,
       top: true,
       opener,
       closer,
       escaper,
+      blocker,
     }
   ]
 
   let textBuffer = ''
   let escapedAt = []
 
+  // note: should be inlined for perf
+  const open = (chunk, h, i) => {
+    if (parents.length >= maxDepth) throw Error(`Invalid parser state! Max depth of ${maxDepth} exceeded!`)
+
+    parents.at(-1).length += 1
+    const parentInfo = {
+      from: {line, column, index}, 
+      length: 0,
+    }
+    parents.push(parentInfo)
+    next.prefix?.(textBuffer + chunk.slice(h, i), {
+      ...parentInfo,
+      escapedAt,
+    })
+    escapedAt = []
+    textBuffer = ''
+  }
+
+  // note: should be inlined for perf
+  const close = (chunk, h, i, tag) => {
+    if (parents.length === 1) throw SyntaxError(`Unexpected closer (${closer}) at ${line}:${column}!`)
+  
+    const parentInfo = parents.pop()
+    parentInfo.to = {line, column, index}
+    if (tag !== undefined) parentInfo.tag = tag
+    next.suffix?.(textBuffer + chunk.slice(h, i), {
+      ...parentInfo,
+      escapedAt,
+    })
+    escapedAt = []
+    textBuffer = ''
+  }
+
   const self = {
     chunk: (chunk) => {
-      let h = 0
+      let h = 0, t = 0
       for (
         let i = 0; 
         i < chunk.length; 
         ++i, ++index
       ) {
         const code = chunk[i]
-        if (isEscaped) {
+
+        if (mode === 'escaped') {
           switch (code) {
             case escaper:
             case opener:
             case closer: {
-              isEscaped = false
+              mode = 'normal'
+              break
+            }
+            case blocker: {
+              open(chunk, h, i)
+              // h = i + 1
+
+              mode = 'tag'
+              t = i + 1
               break
             }
             default:
               throw SyntaxError(`Invalid digraph (${escaper + code}) at ${line}:${column}!`)
           }
-        } else switch (code) {
+        } else if (mode === 'tag') {
+          if (code === blocker) {
+            tag = textBuffer + chunk.slice(t, i)
+            textBuffer = ''
+            h = i + 1
+            t = h
+            mode = 'block'
+          }
+        } else if (mode === 'block') {
+          if (code === blocker) {
+            const found = textBuffer + chunk.slice(h, i)
+            if (found === tag) {
+              close(chunk, t, h - 1, tag)
+              h = i + 1
+              
+              tag = ''
+              mode = 'normal'
+            } else {
+              h = i + 1
+            }
+          }
+        } else /* if (mode === 'normal') */ switch (code) {
           case escaper: {
-            isEscaped = true
+            mode = 'escaped'
             textBuffer += chunk.slice(h, i)
             escapedAt.push(textBuffer.length)
             h = i + 1
             break
           }
           case opener: {
-            if (parents.length >= maxDepth) throw Error(`Invalid parser state! Max depth of ${maxDepth} exceeded!`)
-
-            parents.at(-1).trivial = false
-            parents.push({
-              from: {line, column, index}, 
-              trivial: true
-            })
-            next.prefix?.(textBuffer + chunk.slice(h, i), {
-              escapedAt,
-            })
-            escapedAt = []
-            textBuffer = ''
+            open(chunk, h, i)
             h = i + 1
             break
           }
           case closer: {
-            if (parents.length === 1) throw SyntaxError(`Unexpected closer (${closer}) at ${line}:${column}!`)
-  
-            const parentInfo = parents.pop()
-            parentInfo.to = {line, column, index}
-            next.suffix?.(textBuffer + chunk.slice(h, i), {
-              parentInfo,
-              escapedAt,
-            })
-            escapedAt = []
-            textBuffer = ''
+            close(chunk, h, i)
             h = i + 1
             break
           }
@@ -100,7 +146,10 @@ export const parseJevkoStream = (next, {
       return 'ok'
     },
     end: () => {
-      if (isEscaped) throw SyntaxError(`Unexpected end after escaper (${escaper})!`)
+      // todo: better error msgs
+      if (mode === 'escaped') throw SyntaxError(`Unexpected end after escaper (${escaper})!`)
+      if (mode === 'tag') throw SyntaxError(`Unexpected end after blocker (${blocker})!`)
+      if (mode === 'block') throw SyntaxError(`Unexpected end after blocker (${blocker})!`)
       if (parents.length !== 1) {
         const parentInfo = parents.pop()
         // todo: say which ln, col unclosed
@@ -172,6 +221,7 @@ export const jevkoStreamToTree = (next) => {
     },
     suffix: (suffix, info) => {
       parent.suffix = suffix
+      // note: for compatibility w/ parseJevkoWithHeredocs parent.info.tag should become parent.tag
       parent.info = info
       parent = parents.pop()
     },
