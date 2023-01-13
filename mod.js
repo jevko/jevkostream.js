@@ -7,6 +7,7 @@ export const parseJevkoStream = (next, {
   opener = "[",
   closer = "]",
   escaper = "`",
+  // todo: blocker -> quoter, change to "'", fix bug with sawFirstQuoter, rename modes -- sync up with jevko.js; perhaps extract common part -- or integrate this into jevko.js
   blocker = "/",
 } = {}) => {
   let mode = 'normal'
